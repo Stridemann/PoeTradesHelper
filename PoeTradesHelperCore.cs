@@ -280,7 +280,7 @@ namespace PoeTradesHelper
             {
                 if (DrawImageButton(repeatButtonRect, _repeatIcon, 2))
                 {
-                    _chatController.PrintToChat(tradeEntry.RawMessage);
+                    _chatController.PrintToChat($"@{tradeEntry.PlayerNick} {tradeEntry.Message}");
                 } 
             }
     

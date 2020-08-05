@@ -22,7 +22,9 @@ namespace PoeTradesHelper
                 @"(Hi\,\sI('d like| would like) to buy your|wtb) (?'ItemName'.*) (listed for|for my) (?'CurrencyAmount'[\d.]+) (?'CurrencyType'.*) in (?'LeagueName'\w+)?(?'ExtraText'.*)");
 
             //\((stash tab|stash) \"(?'TabName'.*)\"\;(\sposition\:|) left (?'TabX'\d+)\, top (?'TabY'\d+)\)(?'Offer'.+|)
-            _itemPosRegex = new Regex(@"\((stash tab|stash) \""(?'TabName'.*)\""\;(\sposition\:|) left (?'TabX'\d+)\, top (?'TabY'\d+)\)(?'Offer'.+|)");
+            _itemPosRegex =
+                new Regex(
+                    @"\((stash tab|stash) \""(?'TabName'.*)\""\;(\sposition\:|) left (?'TabX'\d+)\, top (?'TabY'\d+)\)(?'Offer'.+|)");
         }
 
         public ConcurrentDictionary<int, TradeEntry> TradeEntries { get; } =
@@ -37,9 +39,10 @@ namespace PoeTradesHelper
                 if (match.Success)
                     TradeMessageReceived(message, match);
             }
-            else if(message.MessageType == MessageType.NotOnline)
+            else if (message.MessageType == MessageType.NotOnline)
             {
-                var entryToRemove = TradeEntries.LastOrDefault(x => !x.Value.IsIncomingTrade && x.Value.PlayerNick == message.Nick).Value;
+                var entryToRemove = TradeEntries
+                    .LastOrDefault(x => !x.Value.IsIncomingTrade && x.Value.PlayerNick == message.Nick).Value;
                 if (entryToRemove != null)
                 {
                     TradeEntries.TryRemove(entryToRemove.UniqueId, out _);
@@ -50,7 +53,7 @@ namespace PoeTradesHelper
         private void TradeMessageReceived(ChatMessage message, Match match)
         {
             if (_settings.RemoveDuplicatedTrades.Value && TradeEntries.Any(x =>
-                x.Value.PlayerNick == message.Nick && x.Value.RawMessage == message.Message))
+                x.Value.PlayerNick == message.Nick && x.Value.Message == message.Message))
                 return;
 
             var itemName = match.Groups["ItemName"].Value;
@@ -97,7 +100,7 @@ namespace PoeTradesHelper
     public class TradeEntry
     {
         public TradeEntry(string itemName, string playerNick, string currencyType, string currencyAmount,
-            bool incomingTrade, int uniqueId, string rawMessage)
+            bool incomingTrade, int uniqueId, string message)
         {
             ItemName = itemName;
             PlayerNick = playerNick;
@@ -105,7 +108,7 @@ namespace PoeTradesHelper
             CurrencyAmount = currencyAmount;
             IsIncomingTrade = incomingTrade;
             UniqueId = uniqueId;
-            RawMessage = rawMessage;
+            Message = message;
             Timestamp = DateTime.Now;
         }
 
@@ -117,7 +120,7 @@ namespace PoeTradesHelper
         public DateTime Timestamp { get; }
         public ItemPosInfo ItemPosInfo { get; set; }
         public int UniqueId { get; }
-        public string RawMessage { get; }
+        public string Message { get; }
         public string OfferText { get; set; } = string.Empty;
     }
 
