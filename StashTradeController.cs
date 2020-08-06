@@ -36,7 +36,8 @@ namespace PoeTradesHelper
                 return;
 
             var viewAllStashPanel = stashElement.ViewAllStashPanel;
-            var elementHeight = viewAllStashPanel.Height / stashElement.TotalStashes * viewAllStashPanel.Scale;
+            var yShift = _gameController.Memory.Read<float>(viewAllStashPanel.Address + 0x5C);
+            var stashList = viewAllStashPanel.GetChildAtIndex(1);
             var stashNames = stashElement.AllStashNames;
             var currentStash = stashElement.IndexVisibleStash;
             var visibleStash = stashElement.VisibleStash;
@@ -51,11 +52,10 @@ namespace PoeTradesHelper
 
                 var index = stashNames.IndexOf(tradeEntry.ItemPosInfo.TabName);
 
-                if (index != currentStash)
+                if (index != currentStash && viewAllStashPanel.IsVisible)
                 {
-                    var panelRect = viewAllStashPanel.GetClientRectCache;
-                    var rect = new RectangleF(panelRect.X, panelRect.Y + elementHeight * index, panelRect.Width,
-                        elementHeight);
+                    var rect = stashList.GetChildAtIndex(index).GetClientRect();
+                    rect.Y += yShift * viewAllStashPanel.Scale;
                     _graphics.DrawFrame(rect, Color.Yellow, 2);
                 }
                 else if(visibleStash != null)
