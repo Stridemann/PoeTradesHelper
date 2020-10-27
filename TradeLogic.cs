@@ -19,7 +19,7 @@ namespace PoeTradesHelper
         {
             _settings = settings;
             _buyRegex = new Regex(
-                @"(Hi\,\sI('d like| would like) to buy your|wtb) (?'ItemName'.*) (listed for|for my) (?'CurrencyAmount'[\d.]+) (?'CurrencyType'.*) in (?'LeagueName'\w+)?(?'ExtraText'.*)");
+                @"(I('d like| would like) to buy your|wtb) (?'ItemAmount'[\d.]+\s)?(?'ItemName'.*) (listed for|for my) (?'CurrencyAmount'[\d.]+) (?'CurrencyType'.*) in (?'LeagueName'\w+)?(?'ExtraText'.*)");
 
             //\((stash tab|stash) \"(?'TabName'.*)\"\;(\sposition\:|) left (?'TabX'\d+)\, top (?'TabY'\d+)\)(?'Offer'.+|)
             _itemPosRegex =
@@ -56,12 +56,14 @@ namespace PoeTradesHelper
                 x.Value.PlayerNick == message.Nick && x.Value.Message == message.Message))
                 return;
 
+            var itemAmount = match.Groups["ItemAmount"].Value;
             var itemName = match.Groups["ItemName"].Value;
             var currencyType = match.Groups["CurrencyType"].Value;
             var currencyAmount = match.Groups["CurrencyAmount"].Value;
             EntryUniqueIdCounter++;
 
             var tradeEntry = new TradeEntry(
+                itemAmount,
                 itemName,
                 message.Nick,
                 currencyType,
@@ -99,9 +101,10 @@ namespace PoeTradesHelper
 
     public class TradeEntry
     {
-        public TradeEntry(string itemName, string playerNick, string currencyType, string currencyAmount,
+        public TradeEntry(string itemAmount, string itemName, string playerNick, string currencyType, string currencyAmount,
             bool incomingTrade, int uniqueId, string message)
         {
+            ItemAmount = itemAmount;
             ItemName = itemName;
             PlayerNick = playerNick;
             CurrencyType = currencyType;
@@ -113,6 +116,7 @@ namespace PoeTradesHelper
         }
 
         public string PlayerNick { get; }
+        public string ItemAmount { get; }
         public string ItemName { get; }
         public string CurrencyType { get; }
         public string CurrencyAmount { get; }

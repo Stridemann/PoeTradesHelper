@@ -260,7 +260,12 @@ namespace PoeTradesHelper
 
         private void DrawContent(TradeEntry tradeEntry, RectangleF contentRect)
         {
-            Graphics.DrawText(tradeEntry.ItemName, contentRect.TopLeft.Translate(30, 2), Color.Yellow);
+            string nameText = tradeEntry.ItemName;
+            if (tradeEntry.ItemAmount != "")
+            {
+                nameText = tradeEntry.ItemAmount + " " + tradeEntry.ItemName;
+            }
+            Graphics.DrawText(nameText, contentRect.TopLeft.Translate(30, 2), Color.Yellow);
             Graphics.DrawText(tradeEntry.OfferText, contentRect.TopLeft.Translate(contentRect.Width - 30, 2), Color.Red, FontAlign.Right);
 
             var repeatButtonRect = contentRect;
