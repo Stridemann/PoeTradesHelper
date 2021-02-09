@@ -121,6 +121,7 @@ namespace PoeTradesHelper
         public string CurrencyType { get; }
         public string CurrencyAmount { get; }
         public bool IsIncomingTrade { get; }
+        public bool GoToHideout { get; }
         public DateTime Timestamp { get; }
         public ItemPosInfo ItemPosInfo { get; set; }
         public int UniqueId { get; }

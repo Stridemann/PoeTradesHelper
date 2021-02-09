@@ -304,14 +304,21 @@ namespace PoeTradesHelper
                 {
                     _chatController.PrintToChat($"@{tradeEntry.PlayerNick} {replyButtonInfo.Message}");
 
-                    if (replyButtonInfo.KickLeaveParty)
+                    if (replyButtonInfo.GoToOwnHideout)
                     {
                         _tradeLogic.TradeEntries.TryRemove(tradeEntry.UniqueId, out _);
+
+                        _chatController.PrintToChat($"/kick {GameController.Player.GetComponent<Player>().PlayerName}");
+                        _chatController.PrintToChat("/hideout");
+                    }
+                    else if (replyButtonInfo.KickLeaveParty)
+                    {
+                        _tradeLogic.TradeEntries.TryRemove(tradeEntry.UniqueId, out _);
+
                         if (tradeEntry.IsIncomingTrade)
                             _chatController.PrintToChat($"/kick {tradeEntry.PlayerNick}");
                         else
-                            _chatController.PrintToChat(
-                                $"/kick {GameController.Player.GetComponent<Player>().PlayerName}");
+                            _chatController.PrintToChat($"/kick {GameController.Player.GetComponent<Player>().PlayerName}");
                     }
                     else if (replyButtonInfo.Close)
                     {

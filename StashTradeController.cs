@@ -9,6 +9,8 @@ using StashItemsDict = System.Collections.Generic.Dictionary<string, System.Coll
 
 namespace PoeTradesHelper
 {
+    using System.Diagnostics;
+
     public class StashTradeController
     {
         private readonly GameController _gameController;
@@ -36,7 +38,7 @@ namespace PoeTradesHelper
                 return;
 
             var viewAllStashPanel = stashElement.ViewAllStashPanel;
-            var yShift = _gameController.Memory.Read<float>(viewAllStashPanel.Address + 0x5C);            var stashList = viewAllStashPanel.GetChildAtIndex(1);
+            var yShift = _gameController.Memory.Read<float>(viewAllStashPanel.Address + 0x5C);
             var stashNames = stashElement.AllStashNames;
             var currentStash = stashElement.IndexVisibleStash;
             var visibleStash = stashElement.VisibleStash;
@@ -55,9 +57,18 @@ namespace PoeTradesHelper
                 {
                     if (viewAllStashPanel.IsVisible)
                     {
-                        var rect = stashList.GetChildAtIndex(index).GetClientRect();
-                        rect.Y += yShift * viewAllStashPanel.Scale;
-                        _graphics.DrawFrame(rect, Color.Yellow, 2);
+                        var childAtIndex = stashElement.ViewAllStashPanelChildren[index];
+
+                        if (childAtIndex != null)
+                        {
+                            var rect = childAtIndex.GetClientRect();
+                            rect.Y += yShift * viewAllStashPanel.Scale;
+                            _graphics.DrawFrame(rect, Color.Yellow, 2);
+                        }
+                        else
+                        {
+                            Logger.Log.Error($"TradeController: No child at {index}");
+                        }
                     }
                 }
                 else if(visibleStash != null)

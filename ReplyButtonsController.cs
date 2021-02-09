@@ -60,7 +60,8 @@ namespace PoeTradesHelper
 
                 var kickLeaveParty = splited.Length >= 3 && splited[2].ToUpper() == "X";
                 var close = splited.Length >= 3 && splited[2].ToUpper() == "C";
-                var replyInfo = new ReplyButtonInfo(splited[0], splited[1], kickLeaveParty, close);
+                var goHideout = splited.Length >= 3 && splited[2].ToUpper() == "H";
+                var replyInfo = new ReplyButtonInfo(splited[0], splited[1], kickLeaveParty, close, goHideout);
 
                 if(parseIncoming)
                     IncomingReplies.Add(replyInfo);
@@ -71,7 +72,7 @@ namespace PoeTradesHelper
 
         private void SaveDefaults()
         {
-            OutgoingReplies.Add(new ReplyButtonInfo("Thanks", "Thanks", true));
+            OutgoingReplies.Add(new ReplyButtonInfo("Thanks", "Thanks", true, goToOwnHideout:true));
 
             IncomingReplies.Add(new ReplyButtonInfo("1m", "one moment please"));
             IncomingReplies.Add(new ReplyButtonInfo("Thanks", "thanks", true));
@@ -88,12 +89,17 @@ namespace PoeTradesHelper
             sb.AppendLine("//");
             sb.AppendLine("// X mean leave party (or kick from own party, after trade) and close the trade element");
             sb.AppendLine("// C mean just close the trade element");
+            sb.AppendLine("// H mean leave and go to hideout");
             sb.AppendLine();
             sb.AppendLine();
             sb.AppendLine(OUTGOING_REPLIES);
+
             foreach (var replyButtonInfo in OutgoingReplies)
             {
                 var leaveParty = replyButtonInfo.KickLeaveParty ? "|X" : (replyButtonInfo.Close ? "|C" : string.Empty);
+
+                if (replyButtonInfo.GoToOwnHideout)
+                    leaveParty = "|H";
                 sb.AppendLine($"{replyButtonInfo.ButtonName}|{replyButtonInfo.Message}{leaveParty}");
             }
 
@@ -111,10 +117,11 @@ namespace PoeTradesHelper
 
     public class ReplyButtonInfo
     {
-        public ReplyButtonInfo(string buttonName, string message, bool kickLeaveParty = false, bool close = false)
+        public ReplyButtonInfo(string buttonName, string message, bool kickLeaveParty = false, bool close = false, bool goToOwnHideout = false)
         {
             ButtonName = buttonName;
             Message = message;
+            GoToOwnHideout = goToOwnHideout;
             KickLeaveParty = kickLeaveParty;
             Close = close;
         }
@@ -123,5 +130,6 @@ namespace PoeTradesHelper
         public string Message { get; }
         public bool Close { get; }
         public bool KickLeaveParty { get; }
+        public bool GoToOwnHideout { get; }
     }
 }
