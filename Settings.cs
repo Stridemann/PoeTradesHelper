@@ -23,5 +23,6 @@ namespace PoeTradesHelper
         public ToggleNode RemoveDuplicatedTrades { get; set; } = new ToggleNode(true);
         public ToggleNode PlaySound { get; set; } = new ToggleNode(true);
         public RangeNode<int> ChatScanDelay { get; set; } = new RangeNode<int>(1000, 10, 10000);
+        public RangeNode<int> BanMessageTimeMinutes { get; set; } = new RangeNode<int>(20, 1, 100);
     }
 }

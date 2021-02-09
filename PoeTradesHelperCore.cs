@@ -20,6 +20,8 @@ namespace PoeTradesHelper
         private readonly MouseClickController _mouseClickController = new MouseClickController();
         private readonly ReplyButtonsController _replyButtonsController = new ReplyButtonsController();
         private readonly AreaPlayersController _areaPlayersController = new AreaPlayersController();
+        private BannedMessagesFilter _bannedMessagesFilter;
+
         private ChatController _chatController;
         private AtlasTexture _closeTexture;
         private AtlasTexture _entryBgTexture;
@@ -47,6 +49,7 @@ namespace PoeTradesHelper
             _tradeLogic = new TradeLogic(Settings);
             _stashTradeController = new StashTradeController(GameController, Graphics);
             _replyButtonsController.Load(DirectoryFullName);
+            _bannedMessagesFilter = new BannedMessagesFilter(Settings);
 
             _notificationSound = Path.Combine(DirectoryFullName, "Sounds", "notification.wav");
             _iconVisitHideout = GetAtlasTexture("visiteHideout");
@@ -64,8 +67,10 @@ namespace PoeTradesHelper
             _whoIsIcon = GetAtlasTexture("who-is");
 
             _chatController.MessageReceived += _messagesController.ReceiveMessage;
-            _messagesController.ChatMessageReceived += _tradeLogic.OnChatMessageReceived;
-            _messagesController.ChatMessageReceived += _areaPlayersController.OnChatMessageReceived;
+            _messagesController.ChatMessageReceived += _bannedMessagesFilter.FilterMessage;
+            _bannedMessagesFilter.MessagePassed += _tradeLogic.OnChatMessageReceived;
+            _bannedMessagesFilter.MessagePassed += _areaPlayersController.OnChatMessageReceived;
+
             _tradeLogic.NewTradeReceived += OnNewTradeReceived;
 
             _cancellationTokenSource = new CancellationTokenSource();
@@ -255,6 +260,16 @@ namespace PoeTradesHelper
                 buttonsRect.X -= button_width + buttons_spacing;
                 if (DrawImageButton(buttonsRect, _inviteIcon))
                     _chatController.PrintToChat($"/invite {tradeEntry.PlayerNick}");
+
+
+                buttonsRect.X -= button_width + buttons_spacing + 10;
+
+                if (DrawImageButton(buttonsRect, _closeTexture, color:Color.Red))
+                {
+                    _tradeLogic.TradeEntries.TryRemove(tradeEntry.UniqueId, out _);
+
+                    _bannedMessagesFilter.BanMessage(tradeEntry.Message);
+                }
             }
         }
 
