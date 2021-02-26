@@ -10,6 +10,8 @@ using StashItemsDict = System.Collections.Generic.Dictionary<string, System.Coll
 namespace PoeTradesHelper
 {
     using System.Diagnostics;
+    using System.Linq;
+    using ExileCore.PoEMemory.Elements.InventoryElements;
 
     public class StashTradeController
     {
@@ -48,8 +50,22 @@ namespace PoeTradesHelper
                 if (!tradeEntry.IsIncomingTrade)
                     continue;
 
-                if (tradeEntry.ItemPosInfo == null)
+                if (tradeEntry.ItemPosInfo == null)//try draw without pos
+                {
+                    var items = stashElement.VisibleStash?.VisibleInventoryItems;
+
+                    if (items != null)
+                    {
+                        var tradeItem = items.FirstOrDefault(x => GetItemName(x.Item) == tradeEntry.ItemName);
+
+                        if (tradeItem != null)
+                        {
+                            _graphics.DrawFrame(tradeItem.GetClientRect(), Color.Magenta, 2);
+                        }
+                    }
+                    
                     continue;
+                }
 
                 var index = stashNames.IndexOf(tradeEntry.ItemPosInfo.TabName);
 
