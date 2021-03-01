@@ -56,11 +56,11 @@ namespace PoeTradesHelper
 
                     if (items != null)
                     {
-                        var tradeItem = items.FirstOrDefault(x => GetItemName(x.Item) == tradeEntry.ItemName);
+                        var tradeItems = items.Where(x => GetItemName(x.Item) == tradeEntry.ItemName);
 
-                        if (tradeItem != null)
+                        foreach (var item in tradeItems)
                         {
-                            _graphics.DrawFrame(tradeItem.GetClientRect(), Color.Magenta, 2);
+                            _graphics.DrawFrame(item.GetClientRect(), Color.Magenta, 2);
                         }
                     }
                     
