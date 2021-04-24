@@ -71,7 +71,7 @@ namespace PoeTradesHelper
 
                 if (index != currentStash)
                 {
-                    if (viewAllStashPanel.IsVisible)
+                    if (viewAllStashPanel.IsVisible && index != -1)
                     {
                         var childAtIndex = stashElement.ViewAllStashPanelChildren[index];
 

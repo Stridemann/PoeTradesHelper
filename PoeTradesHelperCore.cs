@@ -13,6 +13,11 @@ using SharpDX;
 
 namespace PoeTradesHelper
 {
+    using System.Diagnostics;
+    using System.Linq;
+    using ExileCore.PoEMemory.MemoryObjects;
+    using ExileCore.Shared;
+
     public class PoeTradesHelperCore : BaseSettingsPlugin<Settings>
     {
         private const float ENTRY_HEIGHT = 75;
@@ -41,6 +46,8 @@ namespace PoeTradesHelper
         private TradeLogic _tradeLogic;
         private CancellationTokenSource _cancellationTokenSource;
         private string _notificationSound;
+        private bool _clipboardTradeProcessorProcessPressed;
+        private string _readeProcessorPrevText;
 
         public override bool Initialise()
         {
@@ -74,14 +81,55 @@ namespace PoeTradesHelper
             _tradeLogic.NewTradeReceived += OnNewTradeReceived;
 
             _cancellationTokenSource = new CancellationTokenSource();
+
             var factory = new TaskFactory(_cancellationTokenSource.Token,
-                TaskCreationOptions.LongRunning,
-                TaskContinuationOptions.None,
-                TaskScheduler.Default);
+                                          TaskCreationOptions.LongRunning,
+                                          TaskContinuationOptions.None,
+                                          TaskScheduler.Default);
             factory.StartNew(UpdateThread, _cancellationTokenSource.Token);
 
             return base.Initialise();
         }
+
+        #region Overrides of BaseSettingsPlugin<Settings>
+
+        public override void OnUnload()
+        {
+            base.OnUnload();
+            _cancellationTokenSource.Cancel();
+        }
+
+        public override void EntityAddedAny(Entity entity)
+        {
+            if (entity.Type != EntityType.Player)
+                return;
+
+            if (entity.Address == GameController.Player.Address)
+                return;
+
+            var player = entity.GetComponent<Player>();
+
+            if (string.IsNullOrEmpty(player.PlayerName))
+                return;
+            _areaPlayersController.RegisterPlayerInArea(player.PlayerName);
+        }
+
+        public override void EntityRemoved(Entity entity)
+        {
+            if (entity.Type != EntityType.Player)
+                return;
+
+            if (entity.Address == GameController.Player.Address)
+                return;
+
+            var player = entity.GetComponent<Player>();
+
+            if (string.IsNullOrEmpty(player.PlayerName))
+                return;
+            _areaPlayersController.UnregisterPlayerInArea(player.PlayerName);
+        }
+
+        #endregion
 
         private void OnNewTradeReceived()
         {
@@ -95,6 +143,29 @@ namespace PoeTradesHelper
             {
                 _chatController.Update();
                 Task.Delay(100).Wait();
+
+
+                //The same functionality as in mercury trade. Press F2, press whisper button on trade site (copy to buffer), unpress F2- it will be printed to chat
+                var keyState = Input.GetKeyState(Settings.TradeCopyToChatHotkey.Value);
+                if (keyState && !_clipboardTradeProcessorProcessPressed)
+                {
+                    _clipboardTradeProcessorProcessPressed = true;
+                    _readeProcessorPrevText = ImGui.GetClipboardText();
+                }
+                else if (!keyState && _clipboardTradeProcessorProcessPressed)
+                {
+                    _clipboardTradeProcessorProcessPressed = false;
+                    var tradeText = ImGui.GetClipboardText();
+
+                    if (_readeProcessorPrevText != tradeText)
+                    {
+                        WinApi.SetForegroundWindow(Process.GetCurrentProcess().MainWindowHandle);
+                        Thread.Sleep(30);
+                        _chatController.PrintToChat(tradeText);
+                    }
+
+                    _readeProcessorPrevText = null;
+                }
             }
         }
 
@@ -116,25 +187,31 @@ namespace PoeTradesHelper
                 return;
 
             _mouseClickController.Update();
+
             ImGui.SetNextWindowPos(new System.Numerics.Vector2(Settings.PosX, Settings.PosY), ImGuiCond.Once,
-                System.Numerics.Vector2.Zero);
+                                   System.Numerics.Vector2.Zero);
+
             var windowSize = new System.Numerics.Vector2(Settings.EntryWidth,
-                _tradeLogic.TradeEntries.Count * (ENTRY_HEIGHT + EntrySpacing) + 20);
+                                                         _tradeLogic.TradeEntries.Count * (ENTRY_HEIGHT + EntrySpacing) + 20);
+
             ImGui.SetNextWindowSize(
                 windowSize,
                 ImGuiCond.Always);
 
             var rect = new RectangleF(Settings.PosX, Settings.PosY, windowSize.X, 20);
 
-            var flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoBackground |
+            var flags = ImGuiWindowFlags.NoScrollbar |
+                        ImGuiWindowFlags.NoBackground |
                         ImGuiWindowFlags.NoBringToFrontOnFocus |
-                        ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoSavedSettings;
+                        ImGuiWindowFlags.NoFocusOnAppearing |
+                        ImGuiWindowFlags.NoSavedSettings;
 
             if (!rect.Contains(Input.MousePosition))
                 flags ^= ImGuiWindowFlags.NoMove;
 
-            var _opened = true;
-            if (ImGui.Begin($"{Name}", ref _opened, flags))
+            var opened = true;
+
+            if (ImGui.Begin($"{Name}", ref opened, flags))
             {
                 DrawWindowContent();
 
@@ -147,11 +224,13 @@ namespace PoeTradesHelper
             }
 
             ImGui.End();
+
         }
 
         private void DrawWindowContent()
         {
             var drawPos = new System.Numerics.Vector2(Settings.PosX, Settings.PosY + 20);
+
             foreach (var tradeEntry in _tradeLogic.TradeEntries)
             {
                 var rect = new RectangleF(drawPos.X, drawPos.Y, Settings.EntryWidth, ENTRY_HEIGHT);
@@ -187,7 +266,7 @@ namespace PoeTradesHelper
             headerRect.Y += 3;
 
             if (DrawImageButton(new RectangleF(headerRect.X + 5, headerRect.Y + 1, 18, 18), _whoIsIcon, 2))
-            { 
+            {
                 _chatController.PrintToChat($"/whois {tradeEntry.PlayerNick}");
             }
 
@@ -195,18 +274,20 @@ namespace PoeTradesHelper
             var nickPos = new Vector2(headerRect.X + 5 + 20 + 3, headerRect.Y + 1);
 
             var nickShort = tradeEntry.PlayerNick;
+
             if (nickShort.Length > 18)
             {
                 nickShort = $"{nickShort.Substring(0, 18)}...";
             }
 
-            if(DrawTextButton(ref nickPos, 18, nickShort, 0, inArea ? Color.Green : new Color(255, 211, 78)))
+            if (DrawTextButton(ref nickPos, 18, nickShort, 0, inArea ? Color.Green : new Color(255, 211, 78)))
                 _chatController.PrintToChat($"@{tradeEntry.PlayerNick} ", false);
-            
+
             var currencyTextPos = headerRect.TopLeft.Translate(headerRect.Width / 2 - 5);
+
             var textSize = Graphics.DrawText($"{tradeEntry.CurrencyAmount} {tradeEntry.CurrencyType}",
-                currencyTextPos,
-                Settings.CurrencyColor.Value, FontAlign.Right);
+                                             currencyTextPos,
+                                             Settings.CurrencyColor.Value, FontAlign.Right);
 
             var rectangleF = new RectangleF(currencyTextPos.X - textSize.X - 5 - 18, currencyTextPos.Y, 18, 18);
             Graphics.DrawImage(tradeEntry.IsIncomingTrade ? _outgoingTradeIcon : _incomeTradeIcon, rectangleF);
@@ -214,8 +295,8 @@ namespace PoeTradesHelper
             var elapsed = DateTime.Now - tradeEntry.Timestamp;
 
             Graphics.DrawText(Utils.TimeSpanToString(elapsed),
-                headerRect.TopLeft.Translate(headerRect.Width / 2 + 5),
-                Settings.ElapsedTimeColor.Value);
+                              headerRect.TopLeft.Translate(headerRect.Width / 2 + 5),
+                              Settings.ElapsedTimeColor.Value);
 
             const float button_width = 18;
             const float buttons_spacing = 10;
@@ -225,11 +306,11 @@ namespace PoeTradesHelper
             buttonsRect.Width = button_width;
             buttonsRect.Height = 18;
 
-
             if (DrawImageButton(buttonsRect, _closeTexture, 2))
                 _tradeLogic.TradeEntries.TryRemove(tradeEntry.UniqueId, out _);
 
             buttonsRect.X -= button_width + buttons_spacing;
+
             if (!tradeEntry.IsIncomingTrade)
             {
                 if (DrawImageButton(buttonsRect, _leaveIcon, 1))
@@ -248,23 +329,25 @@ namespace PoeTradesHelper
             }
 
             buttonsRect.X -= button_width + buttons_spacing;
+
             if (DrawImageButton(buttonsRect, _iconTrade, 1, inArea ? Color.Yellow : Color.Gray))
                 _chatController.PrintToChat($"/tradewith {tradeEntry.PlayerNick}");
 
             buttonsRect.X -= button_width + buttons_spacing;
+
             if (DrawImageButton(buttonsRect, _iconVisitHideout))
                 _chatController.PrintToChat($"/hideout {tradeEntry.PlayerNick}");
 
             if (tradeEntry.IsIncomingTrade)
             {
                 buttonsRect.X -= button_width + buttons_spacing;
+
                 if (DrawImageButton(buttonsRect, _inviteIcon))
                     _chatController.PrintToChat($"/invite {tradeEntry.PlayerNick}");
 
-
                 buttonsRect.X -= button_width + buttons_spacing + 10;
 
-                if (DrawImageButton(buttonsRect, _closeTexture, color:Color.Red))
+                if (DrawImageButton(buttonsRect, _closeTexture, color: Color.Red))
                 {
                     _tradeLogic.TradeEntries.TryRemove(tradeEntry.UniqueId, out _);
 
@@ -276,10 +359,12 @@ namespace PoeTradesHelper
         private void DrawContent(TradeEntry tradeEntry, RectangleF contentRect)
         {
             string nameText = tradeEntry.ItemName;
+
             if (tradeEntry.ItemAmount != "")
             {
                 nameText = tradeEntry.ItemAmount + " " + tradeEntry.ItemName;
             }
+
             Graphics.DrawText(nameText, contentRect.TopLeft.Translate(30, 2), Color.Yellow);
             Graphics.DrawText(tradeEntry.OfferText, contentRect.TopLeft.Translate(contentRect.Width - 30, 2), Color.Red, FontAlign.Right);
 
@@ -293,7 +378,7 @@ namespace PoeTradesHelper
             {
                 if (DrawImageButton(repeatButtonRect, _askInterestingIcon, 2))
                 {
-                    _chatController.PrintToChat($"@{tradeEntry.PlayerNick} Hi, still interesting in {tradeEntry.ItemName} for {tradeEntry.CurrencyAmount} {tradeEntry.CurrencyType}?");
+                    _chatController.PrintToChat($"@{tradeEntry.PlayerNick} Let me know if you still interesting in {tradeEntry.ItemName} for {tradeEntry.CurrencyAmount} {tradeEntry.CurrencyType}");
                 }
             }
             else
@@ -301,9 +386,8 @@ namespace PoeTradesHelper
                 if (DrawImageButton(repeatButtonRect, _repeatIcon, 2))
                 {
                     _chatController.PrintToChat($"@{tradeEntry.PlayerNick} {tradeEntry.Message}");
-                } 
+                }
             }
-    
 
             var buttonsDrawPos = contentRect.TopLeft;
             buttonsDrawPos.Y += 25;
@@ -345,7 +429,11 @@ namespace PoeTradesHelper
 
         #region DrawUtils
 
-        private bool DrawImageButton(RectangleF rect, AtlasTexture texture, float imageMargin = 0, Color? color = null)
+        private bool DrawImageButton(
+            RectangleF rect,
+            AtlasTexture texture,
+            float imageMargin = 0,
+            Color? color = null)
         {
             var result = DrawButtonBase(rect);
 
@@ -358,10 +446,16 @@ namespace PoeTradesHelper
             }
 
             Graphics.DrawImage(texture, rect, color ?? Color.White);
+
             return result;
         }
 
-        private bool DrawTextButton(ref Vector2 pos, float height, string text, float sideMargin = 5, Color? color = null)
+        private bool DrawTextButton(
+            ref Vector2 pos,
+            float height,
+            string text,
+            float sideMargin = 5,
+            Color? color = null)
         {
             var textSize = Graphics.MeasureText(text);
 
@@ -369,6 +463,7 @@ namespace PoeTradesHelper
             pos.X += textSize.X + sideMargin * 2 + 5;
 
             Graphics.DrawText(text, rect.Center, color ?? Color.White, FontAlign.Center | FontAlign.VerticalCenter);
+
             return DrawButtonBase(rect);
         }
 
@@ -376,11 +471,11 @@ namespace PoeTradesHelper
         {
             var bgColor = Settings.ButtonBorder.Value;
             var contains = rect.Contains(Input.MousePosition);
+
             if (contains)
                 bgColor = new Color(198, 193, 154);
 
             Graphics.DrawFrame(rect, bgColor, 1);
-
 
             if (contains && _mouseClickController.MouseClick)
                 return true;

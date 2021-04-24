@@ -25,6 +25,17 @@ namespace PoeTradesHelper
             return _playersInArea.Contains(nick);
         }
 
+        public void RegisterPlayerInArea(string nick)
+        {
+            if (!_playersInArea.Contains(nick))
+                _playersInArea.Add(nick);
+        }
+
+        public void UnregisterPlayerInArea(string nick)
+        {
+            _playersInArea.Remove(nick);
+        }
+
         public void Clear()
         {
             _playersInArea.Clear();
