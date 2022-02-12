@@ -79,7 +79,11 @@ namespace PoeTradesHelper
             _bannedMessagesFilter.MessagePassed += _areaPlayersController.OnChatMessageReceived;
 
             _tradeLogic.NewTradeReceived += OnNewTradeReceived;
-
+            Settings.DemoMessage.OnPressed += delegate
+            {
+                _messagesController.ReceiveMessage(
+                    $"@From {GameController.Player.GetComponent<Player>().PlayerName}: Hi, I would like to buy your Test Item listed for 999 chaos in {GameController.IngameState.ServerData.League}");
+            };
             _cancellationTokenSource = new CancellationTokenSource();
 
             var factory = new TaskFactory(_cancellationTokenSource.Token,
@@ -123,6 +127,9 @@ namespace PoeTradesHelper
                 return;
 
             var player = entity.GetComponent<Player>();
+
+            if (player == null)
+                return;
 
             if (string.IsNullOrEmpty(player.PlayerName))
                 return;

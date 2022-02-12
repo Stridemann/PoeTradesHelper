@@ -51,7 +51,7 @@ namespace PoeTradesHelper.Chat
                 if (!messageElement.IsVisibleLocal)
                     continue;
 
-                var text = NativeStringReader.ReadStringLong(messageElement.Address + 0x2E8, messageElement.M);
+                var text = NativeStringReader.ReadStringLong(messageElement.Address + 0x3A0, messageElement.M);
                 msgQueue.Enqueue(text);
 
                 //try

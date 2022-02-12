@@ -9,7 +9,7 @@ namespace PoeTradesHelper
     public class Settings : ISettings
     {
         public ToggleNode Enable { get; set; } = new ToggleNode(true);
-
+        public ButtonNode DemoMessage { get; set; } = new ButtonNode();
         public float PosX { get; set; } = 100;
         public float PosY { get; set; } = 100;
         public float EntryWidth { get; set; } = 300;
